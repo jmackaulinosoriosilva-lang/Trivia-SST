@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Juego interactivo</title>
+
+<style>
+  :root{
+    --bg-1: #0f1720;
+    --accent: #d62828;
+    --muted: #8a8f98;
+    --card: rgba(255,255,255,0.96);
+    --glass: rgba(255,255,255,0.08);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;}
+  body {
+    font-family: Inter, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial;
+    /* profesional red-black gradient */
+    background: radial-gradient(1200px 600px at 10% 10%, rgba(255,25,25,0.06) 0%, rgba(0,0,0,0.5) 30%),
+          linear-gradient(135deg,#120000 0%, #0b0000 40%, #200000 100%);
+    color: #0b1020;
+    margin: 0;
+    display:flex;align-items:center;justify-content:center;padding:32px;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .center-box {
+    background: var(--card);
+    padding: 28px;
+    width: 420px;
+    border-radius: 16px;
+    text-align: left;
+    box-shadow: 0 10px 40px rgba(2,6,23,0.6), 0 2px 0 rgba(0,0,0,0.05) inset;
+    animation: fadeIn 0.4s ease;
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(6px) saturate(120%);
+  }
+
+  @keyframes fadeIn {
+    from {opacity: 0; transform: scale(0.9);} 
+    to {opacity: 1; transform: scale(1);} 
+  }
+
+  .input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: 1px solid #aaa;
+    font-size: 16px;
+  }
+
+  .avatar-box {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 10px 0 6px 0;
+  }
+
+  .avatar {
+    width: 78px;
+    height: 78px;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: 0.2s;
+  }
+
+  .avatar:hover {
+    transform: scale(1.07) translateY(-3px);
+    box-shadow: 0 6px 20px rgba(214,40,40,0.18);
+  }
+
+  .avatar.selected {
+    border-color: #d62828;
+    transform: scale(1.12);
+  }
+
+  .btn {
+    display:inline-block;
+    padding: 10px 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: 0.15s ease;
+  }
+  .btn:hover{transform: translateY(-2px) scale(1.01);filter:brightness(0.98)}
+  button:active, .btn:active{transform: translateY(0) scale(.99);transition:transform .06s ease}
+  .btn.secondary{background:#6b7280}
+  .btn.ghost{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.06)}
+
+  /* full-width primary button for start */
+  button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.2s;
+  }
+
+  button:hover {
+    background: #b71c1c;
+    transform: scale(1.03);
+  }
+
+  /* TARJETA DEL JUEGO */
+  .card {
+    display: none;
+    background: #ffffffdd;
+    backdrop-filter: blur(5px);
+    width: 90%;
+    max-width: 430px;
+    padding: 25px;
+    border-radius: 20px;
+    text-align: center;
+    animation: fadeIn 0.6s ease;
+  }
+
+  #timer {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(214,40,40,0.06);
+    display:inline-block;padding:6px 10px;border-radius:8px
+  }
+
+  .progress-wrap{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+  .progress-bar{flex:1;height:10px;background:linear-gradient(90deg,#f3f3f3,#eee);border-radius:999px;overflow:hidden}
+  .progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#ff6b6b);border-radius:inherit;transition:width .4s ease}
+  .qcount{font-size:13px;color:var(--muted)}
+
+  .options-grid{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .option{background:#f8fafc;border-radius:10px;padding:12px;border:1px solid rgba(0,0,0,0.04);box-shadow:0 2px 0 rgba(0,0,0,0.03)}
+  .option:hover{transform:none;background:#f3f6f8}
+  .option.correct{background:#e6ffef;border-color: #a5f3c7}
+  .option.wrong{background:#ffeced;border-color:#ffb4b4}
+
+  /* microinteractions */
+  .option.animate { transform-origin:center; animation: pop .18s ease-out; }
+  .option[aria-checked='true']{outline:3px solid rgba(214,40,40,0.08)}
+  @keyframes pop {0%{transform:scale(.98)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+
+  .start-ready{box-shadow: 0 8px 30px rgba(214,40,40,0.22); transform: translateY(-2px);}
+  @keyframes pulse {
+    0%{transform:scale(1)}
+    50%{transform:scale(1.03)}
+    100%{transform:scale(1)}
+  }
+  .start-ready:after{content:'';position:absolute;left:0;right:0;height:6px;border-radius:6px;bottom:-12px;background:linear-gradient(90deg,rgba(214,40,40,0.14), rgba(255,107,107,0.06));}
+
+  /* subtle confetti colors */
+  .confetti { background: linear-gradient(45deg,#ffd166,#ff6b6b); width:8px;height:12px;border-radius:2px;opacity:.95;transform-origin:center }
+  /* add small rotation to confetti */
+  .confetti:nth-child(odd){transform: rotate(15deg);} 
+
+  .option {
+    background: #eee;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.25s;
+  }
+
+  .option:hover {
+    background: #ddd;
+    transform: scale(1.02);
+  }
+
+  /* VICTORY SCREEN */
+  #victoryScreen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    backdrop-filter: blur(8px);
+    background: #000000aa;
+    color: white;
+    text-align: center;
+    padding-top: 80px;
+    animation: fadeIn 0.8s ease;
+  }
+
+  .medal {
+    font-size: 100px;
+    margin-bottom: 15px;
+  }
+
+  .gold { color: gold; }
+  .silver { color: #c0c0c0; }
+  .bronze { color: #cd7f32; }
+
+  #ranking {
+    margin-top: 20px;
+    font-size: 1.1em;
+    color: #ddd;
+  }
+
+  /* CONFETTI */
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background: gold;
+    top: -10px;
+    animation: fall 3s linear infinite;
+  }
+
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(360deg); }
+  }
+  @media (max-width:480px){
+    .center-box{width:96%;padding:18px}
+    .avatar{width:64px;height:64px}
+    .card{padding:18px}
+  }
+</style>
+</head>
+
+<body>
+
+<!-- site logo top-left -->
+<a href="/" aria-label="Inicio" style="position:fixed;left:18px;top:18px;z-index:1600;display:block;">
+  <img id="siteLogo" src="assets/img/sd_logo.png" alt="SD Logo" style="width:140px;height:56px;object-fit:contain;border-radius:0;box-shadow:0 18px 48px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.06);transition:transform .18s ease,box-shadow .18s ease" />
+</a>
+
+<!-- PANTALLA DE INICIO -->
+<div id="startScreen" class="center-box" role="main" aria-labelledby="title">
+  <header style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+    <div style="width:120px;height:44px;overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 26px rgba(0,0,0,0.45);">
+      <img src="assets/img/sd_logo.png" alt="SD Logo" style="width:100%;height:100%;object-fit:contain;border-radius:0" />
+    </div>
+    <div>
+      <h2 id="title" style="margin:0;color:#0b1020;">Juego interactivo</h2>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Aprende y evalúa tus conocimientos en Seguridad y Salud en el Trabajo</div>
+    </div>
+  </header>
+
+  <label for="playerName" style="font-weight:600;color:#0b1020">Tu nombre</label>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <input id="playerName" class="input" placeholder="Escribe tu nombre" aria-label="Nombre del jugador" />
+    <img id="startAvatarPreview" width="56" height="56" style="border-radius:10px;border:2px solid rgba(0,0,0,0.06);display:none;object-fit:cover;" alt="preview">
+  </div>
+
+  <h3 style="margin-top:10px">Sube tu avatar</h3>
+  <div class="avatar-box" aria-hidden="true">
+    <div style="width:78px;height:78px;border-radius:12px;background:linear-gradient(135deg,#fff6f6,#fdecec);display:flex;align-items:center;justify-content:center;color:#6b0000;font-weight:700">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="3.2" stroke="#b71c1c" stroke-width="1.2"/><path d="M3 20c0-3.866 4.03-7 9-7s9 3.134 9 7" stroke="#b71c1c" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:8px;align-items:center;justify-content:center;flex-direction:column;">
+    <div style="display:flex;gap:12px;align-items:center;width:100%;justify-content:center;">
+      <div style="text-align:center;color:var(--muted);font-size:13px">Sube una foto (opcional)</div>
+    </div>
+    <input id="uploadAvatar" type="file" accept="image/*" style="display:block;border-radius:8px;padding:6px;" />
+    <div id="uploadMsg" style="font-size:12px;color:var(--muted);min-height:18px">Se acepta: jpg, png, svg — máximo 300 KB</div>
+  </div>
+
+  <div style="display:flex;gap:8px;margin-top:12px;">
+    <button id="startBtn" onclick="startGame()" class="btn" disabled>Comenzar</button>
+    <button id="clearSaved" class="btn secondary" style="width:auto">Borrar guardado</button>
+  </div>
+
+  <div style="margin-top:10px;text-align:center;color:var(--muted);font-size:12px">Consejo: escribe tu nombre y selecciona un avatar (o sube uno). El avatar subido reemplazará la tercera opción.</div>
+</div>
+
+<!-- TARJETA DEL JUEGO -->
+<div id="gameCard" class="card">
+  <div class="progress-wrap">
+    <div class="progress-bar" aria-hidden><div id="progressFill" class="progress-fill"></div></div>
+    <div class="qcount"><span id="qIndex">0</span>/<span id="qTotal">10</span></div>
+  </div>
+
+  <h2 id="question" style="margin:8px 0 6px 0"></h2>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div id="timer"></div><div id="difficulty" style="font-size:13px;color:var(--muted)"></div></div>
+  <div id="options" class="options-grid" role="listbox" aria-label="Opciones"></div>
+</div>
+
+<!-- VICTORY SCREEN -->
+<div id="victoryScreen">
+  <div id="victoryMedal"></div>
+  <div style="margin:12px 0;display:flex;gap:12px;align-items:center;justify-content:center;flex-direction:column;">
+    <img id="playerAvatarPreview" width="96" height="96" style="border-radius:14px;border:3px solid rgba(255,255,255,0.14);display:none;object-fit:cover;box-shadow:0 12px 30px rgba(0,0,0,0.35);" alt="Tu avatar">
+    <div id="scoreCard" style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div id="scoreBig" style="font-size:44px;font-weight:800;color:var(--accent);letter-spacing:0.6px;">0/10</div>
+      <div id="scoreMeter" style="width:160px;height:8px;background:linear-gradient(90deg,#fff0,#fff0);border-radius:8px;overflow:hidden;box-shadow:inset 0 -2px 6px rgba(0,0,0,0.12)"></div>
+    </div>
+  </div>
+  <h1 id="victoryTitle" style="margin-top:6px;font-size:22px"></h1>
+  <h2 id="victoryScore" style="font-size:15px;color:rgba(255,255,255,0.85);margin-top:2px"></h2>
+
+  <div id="ranking"></div>
+
+  <button onclick="restart()">Volver a jugar</button>
+</div>
+
+<script>
+/* ---------- VARIABLES ---------- */
+let playerName = "";
+let playerAvatar = null; // '1' | '2' | '3' or null
+let questions = [];
+let index = 0;
+let score = 0;
+let timer = 0;
+let timerInterval;
+
+/* ---------- SONIDOS ---------- */
+const soundCorrect = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_9e678f3b51.mp3?filename=correct-2-46134.mp3");
+const soundWrong = new Audio("https://cdn.pixabay.com/download/audio/2021/08/04/audio_619eca14ff.mp3?filename=error-126627.mp3");
+const soundVictory = new Audio("https://cdn.pixabay.com/download/audio/2023/05/10/audio_34919f7775.mp3?filename=winning-21869.mp3");
+
+/* ---------- AVATARES ---------- */
+// Ahora la selección de avatar se hace únicamente mediante subida de archivo (upload).
+
+// Nota: Ya no generamos avatars desde el nombre — el usuario debe subir su avatar o seleccionar uno de los predeterminados.
+
+// actualizar avatars cada vez que el usuario escribe su nombre
+const nameInput = document.getElementById('playerName');
+nameInput.addEventListener('input', (e) => {
+  // Ya no generamos avatars desde el nombre; solo actualizamos el estado del botón de inicio
+  updateStartButton();
+});
+
+// start button logic
+function updateStartButton(){
+  const start = document.getElementById('startBtn');
+  const nameVal = document.getElementById('playerName').value.trim();
+  // Allow starting when the user enters a name. If no avatar was uploaded,
+  // a default avatar will be used at game start.
+  if (nameVal) {
+    start.removeAttribute('disabled');
+    start.classList.add('start-ready');
+  } else {
+    start.setAttribute('disabled','');
+    start.classList.remove('start-ready');
+  }
+}
+
+
+// Al comenzar el juego, asignar el avatar definitivo (si queremos preservar la URL completa)
+// Nota: playerAvatar (id 1..3) ya guarda la selección; su src se toma más tarde para preview.
+
+// Persistencia: guardar/restaurar nombre y avatar en localStorage
+function loadSavedProfile() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('trivia_profile') || 'null');
+    if (!saved) return;
+
+    // restaurar nombre
+    if (saved.name) {
+      const el = document.getElementById('playerName');
+      el.value = saved.name;
+      // set the start button state after restoring the name
+      setTimeout(() => updateStartButton(), 30);
+    }
+
+    // restaurar avatar (puede ser dataURL o URL remota)
+    if (saved.avatar) {
+      // si avatar es una index referenciado (1/2/3) se marca; si es una URL, añadimos temporal
+      if (saved.avatarType === 'index') {
+        // previously used index-based avatars — map to local asset files
+        const asset = `assets/img/avatar${saved.avatar}.svg`;
+        playerAvatar = 'index';
+        const previewEl = document.getElementById('startAvatarPreview');
+        const victoryPreview = document.getElementById('playerAvatarPreview');
+        if (previewEl) { previewEl.src = asset; previewEl.style.display = 'inline-block'; }
+        if (victoryPreview) { victoryPreview.src = asset; victoryPreview.style.display = 'inline-block'; }
+        updateStartButton();
+      } else if (saved.avatarType === 'data') {
+        // restaurar avatar subido por el usuario en la vista previa
+        const customData = saved.avatar;
+        playerAvatar = 'data';
+        const previewEl = document.getElementById('startAvatarPreview');
+        const victoryPreview = document.getElementById('playerAvatarPreview');
+        if (previewEl) { previewEl.src = customData; previewEl.style.display = 'inline-block'; }
+        if (victoryPreview) { victoryPreview.src = customData; victoryPreview.style.display = 'inline-block'; }
+        document.getElementById('uploadMsg').textContent = 'Avatar cargado desde tu configuración';
+        updateStartButton();
+      }
+    }
+  } catch (e) {
+    console.warn('Error leyendo perfil guardado', e);
+  }
+}
+
+function saveProfile(name, avatarType, avatar) {
+  const payload = { name: name || '', avatarType: avatarType || null, avatar: avatar || null };
+  try {
+    localStorage.setItem('trivia_profile', JSON.stringify(payload));
+  } catch (e) { console.warn('No se pudo guardar perfil', e); }
+}
+
+// Handler para input file (subir avatar) — guardamos data URL y actualizamos las previews
+const uploadEl = document.getElementById('uploadAvatar');
+const uploadMsg = document.getElementById('uploadMsg');
+uploadEl.addEventListener('change', (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+
+  // basic validations
+  const maxBytes = 300 * 1024; // 300KB
+  const allowed = ['image/jpeg','image/png','image/svg+xml','image/webp'];
+  if (!allowed.includes(f.type)) {
+    uploadMsg.textContent = 'Tipo no soportado — usa jpg, png, svg o webp.';
+    uploadMsg.style.color = '#c2410c';
+    uploadEl.value = '';
+    return;
+  }
+  if (f.size > maxBytes) {
+    uploadMsg.textContent = 'La imagen es demasiado grande. Máximo 300 KB.';
+    uploadMsg.style.color = '#c2410c';
+    uploadEl.value = '';
+    return;
+  }
+
+  uploadMsg.textContent = 'Cargando avatar...'; uploadMsg.style.color = 'var(--muted)';
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const dataUrl = ev.target.result;
+    // establecer avatar subido como el avatar actual
+    playerAvatar = 'data';
+    // guardar perfil
+    const nameVal = document.getElementById('playerName').value.trim();
+    saveProfile(nameVal, 'data', dataUrl);
+    uploadMsg.textContent = 'Avatar listo — se guardó en tu perfil.'; uploadMsg.style.color = 'green';
+    // show previews on start and victory
+    const startPreview = document.getElementById('startAvatarPreview');
+    const victoryPreview = document.getElementById('playerAvatarPreview');
+    if (startPreview) { startPreview.src = dataUrl; startPreview.style.display = 'inline-block'; }
+    if (victoryPreview) { victoryPreview.src = dataUrl; victoryPreview.style.display = 'inline-block'; }
+    updateStartButton();
+  };
+  reader.readAsDataURL(f);
+});
+
+// Botón para limpiar perfil guardado
+document.getElementById('clearSaved').addEventListener('click', () => {
+  localStorage.removeItem('trivia_profile');
+  // reset UI
+  document.getElementById('playerName').value = '';
+  // reset preview images
+  const startPrev = document.getElementById('startAvatarPreview');
+  const victoryPrev = document.getElementById('playerAvatarPreview');
+  if (startPrev) { startPrev.src = ''; startPrev.style.display = 'none'; }
+  if (victoryPrev) { victoryPrev.src = ''; victoryPrev.style.display = 'none'; }
+  playerAvatar = null;
+});
+
+// Ya no existe selección por index (solo subida). No guardamos selección desde thumbnails.
+
+// Al cargar la página restauramos perfil si existe
+window.addEventListener('load', loadSavedProfile);
+
+// Helper: convenient method for tests to set an avatar by dataURL (also used for programmatic preload)
+function setAvatarFromDataUrl(dataUrl) {
+  if (!dataUrl) return;
+  playerAvatar = 'data';
+  saveProfile(document.getElementById('playerName').value.trim(), 'data', dataUrl);
+  const startPreview = document.getElementById('startAvatarPreview');
+  const victoryPreview = document.getElementById('playerAvatarPreview');
+  if (startPreview) { startPreview.src = dataUrl; startPreview.style.display = 'inline-block'; }
+  if (victoryPreview) { victoryPreview.src = dataUrl; victoryPreview.style.display = 'inline-block'; }
+  document.getElementById('uploadMsg').textContent = 'Avatar cargado';
+  updateStartButton();
+}
+
+/* ---------- PREGUNTAS (ampliadas y variadas) ---------- */
+const allQuestions = [
+  { q: "¿Qué significa EPP?", o: ["Equipo de Protección Personal", "Equipo de Prevención Profesional", "Elemento de Primera Protección"], c: 0, d: "facil" },
+  { q: "¿Cuál es la coloración habitual de la señal que indica 'prohibido'?", o: ["Amarillo", "Rojo", "Verde"], c: 1, d: "facil" },
+  { q: "¿Cuál es el uso correcto de las gafas de seguridad?", o: ["Tapar el polvo de la mesa", "Proteger los ojos de impactos y salpicaduras", "Evitar resbalones"], c: 1, d: "facil" },
+  { q: "Ante un derrame químico, la mejor acción inicial es:", o: ["Avisar y usar EPP", "Intentar neutralizar sin protección", "Cerrar la nave y salir"], c: 0, d: "facil" },
+  { q: "Una señal de color verde generalmente comunica:", o: ["Peligro inminente", "Información/seguridad", "Prohibición"], c: 1, d: "facil" },
+
+  { q: "La causa más frecuente de lesiones por golpes en la cabeza en obras es:", o: ["Golpes contra objetos o alturas", "Falta de pausas activas", "Ruidos fuertes"], c: 0, d: "intermedio" },
+  { q: "Qué extintor usarías para una instalación eléctrica en llamas?", o: ["Agua", "CO₂ (dióxido de carbono)", "Arena únicamente"], c: 1, d: "intermedio" },
+  { q: "Límite de exposición al ruido recomendado para no necesitar protección auditiva (por ley suele ser):", o: ["85 dB por 8 h", "120 dB por 8 h", "50 dB por jornada"], c: 0, d: "intermedio" },
+  { q: "¿Qué debes hacer si detectas un escape de gas en el área de trabajo?", o: ["Encender los motores para evacuar", "Ventilar y avisar a encargados", "Ignorar y seguir trabajando"], c: 1, d: "intermedio" },
+  { q: "Qué documento define las responsabilidades en una emergencia?", o: ["Diagrama eléctrico", "Plan de emergencias", "Manual de ventas"], c: 1, d: "intermedio" },
+
+  { q: "En políticas de seguridad, qué significa 'IPER' en muchos contextos?", o: ["Identificación de Peligros y Evaluación de Riesgos", "Informe de Protección Eléctrica Regular", "Inventario de Productos"], c: 0, d: "intermedio" },
+  { q: "Cuál es la orden correcta en una maniobra de RCP básica?", o: ["Comprimir — Ventilar", "Apagar — Encender", "Soplar — Correr"], c: 0, d: "dificil" },
+  { q: "Si un producto químico salpica tu piel, lo más recomendable es:", o: ["Lavar con abundante agua de inmediato", "Esperar a ver si sale solo", "Cubrir con paños"], c: 0, d: "dificil" },
+  { q: "Qué describe mejor un riesgo biomecánico?", o: ["Movimientos o cargas repetitivas que dañan el cuerpo", "Radiación ionizante", "Incendio por combustión lenta"], c: 0, d: "dificil" },
+  { q: "La protección respiratoria es necesaria para protegerse contra:", o: ["Ruidos intensos", "Sustancias peligrosas en el aire", "Cortes en manos"], c: 1, d: "dificil" },
+
+  { q: "Cuál es la mejor práctica para levantar una carga pesada?", o: ["Flexionar las rodillas y mantener la espalda recta", "Doblar la espalda y empujar con los brazos", "Girar el torso rápidamente"], c: 0, d: "intermedio" },
+  { q: "Por qué es importante reportar casi accidentes (near misses)?", o: ["Para evitar sanciones", "Para comunicar y prevenir futuros incidentes", "No es importante"], c: 1, d: "intermedio" },
+  { q: "Qué equipo es clave para trabajos en altura?", o: ["Guantes de algodón", "Arnés y línea de vida", "Botas sin suela"], c: 1, d: "intermedio" },
+  { q: "Cómo se denomina el conjunto de acciones destinadas a controlar riesgos laborales?", o: ["Marketing interno", "Gestión de la Seguridad y Salud en el Trabajo (SGSST)", "Inventario diario"], c: 1, d: "intermedio" },
+  { q: "Qué tipo de fuego se apaga con CO₂?", o: ["Fuegos eléctricos/flammables líquidos", "Fuegos de material vegetal", "Fuegos con metales"], c: 0, d: "intermedio" },
+
+  { q: "Qué indica una etiqueta de peligro con el pictograma de calavera?", o: ["Inflamable", "Tóxico/venenoso", "No reutilizar"], c: 1, d: "dificil" },
+  { q: "Qué se debe hacer si se identifica un incidente con derrame químico importante?", o: ["Poner en cuarentena el área y llamar al equipo especializado", "Tapar el derrame y seguir trabajando", "No informar a nadie"], c: 0, d: "dificil" },
+  { q: "Cuál es el mejor método para prevenir lesiones por esfuerzo repetitivo?", o: ["Control de tiempos, pausas y rotación de tareas", "Aumentar la velocidad de trabajo", "Usar un solo trabajador"], c: 0, d: "dificil" },
+  { q: "Qué documento se usa para identificar peligros y establecer controles específicos en una tarea?", o: ["Plan de marketing", "IPERC/IPER", "Acta de reunión"], c: 1, d: "dificil" },
+  { q: "Qué acción inmediata ante una quemadura química en el ojo?", o: ["Lavar con agua abundante y buscar ayuda médica", "Frotarse los ojos", "Intentar neutralizar con otro químico"], c: 0, d: "dificil" },
+
+  { q: "Cuál es una medida clave para prevenir incendios eléctricos?", o: ["Sobrecargar enchufes", "Realizar mantenimiento y no usar agua en equipos energizados", "Desconectar detectores de humo"], c: 1, d: "intermedio" },
+  { q: "Cómo deberías almacenar sustancias peligrosas en un almacén?", o: ["En recipientes etiquetados y zonas ventiladas", "A granel en cualquier rincón", "En contacto con alimentos"], c: 0, d: "intermedio" },
+  { q: "Qué significa actuar con 'cultura de seguridad' en una organización?", o: ["Solo cumplir con excepciones", "Fomentar actitudes y comportamientos de prevención en todos", "Delegar todo al supervisor"], c: 1, d: "intermedio" },
+  { q: "Cuál es la prioridad en una evacuación?", o: ["Recuperar documentos importantes", "Priorizar la seguridad de las personas", "Asegurar equipos primero"], c: 1, d: "facil" },
+  { q: "Qué equipamiento se recomienda para manipular productos químicos corrosivos?", o: ["Guantes y protección ocular adecuados", "Zapatos abiertos y ropa normal", "Nada especial"], c: 0, d: "intermedio" },
+
+  { q: "En un accidente con pérdida de consciencia, qué se debe comprobar primero?", o: ["Tomar un selfie", "Ver si respira y llamar a emergencias", "Mover a la persona inmediatamente"], c: 1, d: "dificil" }
+];
+
+/* ---------- INICIAR JUEGO ---------- */
+function startGame() {
+  playerName = document.getElementById("playerName").value.trim();
+
+  if (playerName === "") {
+    alert("Debes escribir tu nombre.");
+    return;
+  }
+
+  // If the user didn't upload/select an avatar, set a sensible default
+  // (local asset `assets/img/avatar1.svg`) and save it to the profile.
+  if (!playerAvatar) {
+    const defaultIndex = '1';
+    const defaultAsset = `assets/img/avatar${defaultIndex}.svg`;
+    playerAvatar = 'index';
+    const startPreview = document.getElementById('startAvatarPreview');
+    const victoryPreview = document.getElementById('playerAvatarPreview');
+    if (startPreview) { startPreview.src = defaultAsset; startPreview.style.display = 'inline-block'; }
+    if (victoryPreview) { victoryPreview.src = defaultAsset; victoryPreview.style.display = 'inline-block'; }
+    // persist default avatar (avatar stores the index for 'index' type)
+    saveProfile(playerName, 'index', defaultIndex);
+  }
+
+  // Guardar perfil final al comenzar el juego
+  const previewSrc = (document.getElementById('playerAvatarPreview').src || document.getElementById('startAvatarPreview').src || '');
+  if (previewSrc) {
+    // preferimos guardar la URL/data del preview como avatar
+    saveProfile(playerName, 'data', previewSrc);
+  } else {
+    saveProfile(playerName, null, null);
+  }
+
+  score = 0;
+  index = 0;
+
+  // Selección aleatoria de 10 preguntas
+  questions = [...allQuestions].sort(() => Math.random() - 0.5).slice(0, 10);
+
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("gameCard").style.display = "block";
+
+  loadQuestion();
+}
+
+/* ---------- TEMPORIZADOR POR DIFICULTAD ---------- */
+function startTimer(difficulty) {
+  clearInterval(timerInterval);
+
+  if (difficulty === "facil") timer = 15;
+  if (difficulty === "intermedio") timer = 25;
+  if (difficulty === "dificil") timer = 30;
+
+  document.getElementById("timer").textContent = `Tiempo: ${timer}s`;
+
+  timerInterval = setInterval(() => {
+    timer--;
+    document.getElementById("timer").textContent = `Tiempo: ${timer}s`;
+
+    if (timer <= 0) {
+      clearInterval(timerInterval);
+      index++;
+      loadQuestion();
+    }
+  }, 1000);
+}
+
+/* ---------- MOSTRAR PREGUNTA ---------- */
+function loadQuestion() {
+  if (index >= questions.length) return endGame();
+
+  const q = questions[index];
+
+  document.getElementById("question").textContent = q.q;
+  document.getElementById("options").innerHTML = "";
+
+  // update progress UI
+  const total = questions.length;
+  document.getElementById('qTotal').textContent = total;
+  document.getElementById('qIndex').textContent = index + 1;
+  const pct = Math.round((index / Math.max(1, total)) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  // show difficulty
+  const diffEl = document.getElementById('difficulty');
+  if (diffEl) diffEl.textContent = (q.d === 'facil' ? 'Fácil' : q.d === 'intermedio' ? 'Intermedio' : 'Difícil');
+
+  startTimer(q.d);
+
+  q.o.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    btn.classList.add("option");
+    btn.type = 'button';
+    btn.setAttribute('role','option');
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(i);
+    document.getElementById("options").appendChild(btn);
+  });
+}
+
+/* ---------- VALIDAR RESPUESTA ---------- */
+function checkAnswer(i) {
+  clearInterval(timerInterval);
+
+  const correctIndex = questions[index].c;
+  const opts = document.querySelectorAll(".option");
+
+  opts.forEach((o, idx) => {
+    o.style.pointerEvents = "none";
+    if (idx === correctIndex) o.classList.add('correct');
+    else if (idx === i) o.classList.add('wrong');
+  });
+
+  // microinteraction: animate the clicked option
+  const chosen = opts[i];
+  if (chosen) chosen.classList.add('animate');
+
+  if (i === correctIndex) {
+    soundCorrect.play();
+    score++;
+  } else {
+    soundWrong.play();
+  }
+
+  setTimeout(() => {
+    index++;
+    loadQuestion();
+  }, 900);
+}
+
+/* ---------- FINAL DEL JUEGO ---------- */
+function endGame() {
+  document.getElementById("gameCard").style.display = "none";
+  document.getElementById("victoryScreen").style.display = "block";
+
+  const previewSrc = document.getElementById('playerAvatarPreview').src || document.getElementById('startAvatarPreview').src || '';
+  const avatarSrc = previewSrc || '';
+  saveToRanking(playerName, score, avatarSrc);
+
+  const medalDiv = document.getElementById("victoryMedal");
+  const title = document.getElementById("victoryTitle");
+
+  const scoreEl = document.getElementById('scoreBig');
+  const meter = document.getElementById('scoreMeter');
+  const fillPct = Math.round((score / 10) * 100);
+
+  // animate number (0 -> score) and meter
+  let anim = 0;
+  const animInt = setInterval(() => {
+    anim += 1;
+    const val = Math.round((anim / 10) * score);
+    if (scoreEl) scoreEl.textContent = `${val}/10`;
+    if (meter) meter.style.background = `linear-gradient(90deg,var(--accent) ${Math.round((val/10)*100)}%, rgba(255,255,255,0.06) 0%)`;
+    if (anim >= 10) clearInterval(animInt);
+  }, 40);
+
+  if (score >= 9) {
+    medalDiv.innerHTML = '<div class="medal gold">🥇</div>';
+    title.textContent = "¡Victoria Suprema!";
+    soundVictory.play();
+    launchConfetti();
+  } else if (score >= 7) {
+    medalDiv.innerHTML = '<div class="medal silver">🥈</div>';
+    title.textContent = "¡Gran Resultado!";
+  } else {
+    medalDiv.innerHTML = '<div class="medal bronze">🥉</div>';
+    title.textContent = "Buen intento, sigue aprendiendo";
+  }
+
+  document.getElementById("victoryScore").textContent = `${playerName}, tu puntaje fue ${score}/10`;
+
+  // mostrar preview (si existe) en la pantalla de victoria
+  const preview = document.getElementById('playerAvatarPreview');
+  const startPrev = document.getElementById('startAvatarPreview');
+  const chosenSrc = preview.src || startPrev.src || '';
+  if (chosenSrc) { preview.src = chosenSrc; preview.style.display = 'inline-block'; }
+  else { preview.style.display = 'none'; }
+
+  showRanking();
+}
+
+/* ---------- CONFETTI ---------- */
+function launchConfetti() {
+  for (let i = 0; i < 60; i++) {
+    let c = document.createElement("div");
+    c.classList.add("confetti");
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.animationDuration = (2 + Math.random() * 2) + "s";
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4000);
+  }
+}
+
+/* ---------- RANKING LOCAL ---------- */
+function saveToRanking(name, score, avatar) {
+  let ranking = JSON.parse(localStorage.getItem("rankingSST") || "[]");
+
+  ranking.push({ name, score, avatar: avatar || null });
+  ranking.sort((a, b) => b.score - a.score);
+
+  ranking = ranking.slice(0, 5);
+  localStorage.setItem("rankingSST", JSON.stringify(ranking));
+}
+
+function showRanking() {
+  const list = JSON.parse(localStorage.getItem("rankingSST") || "[]");
+  let html = "<h3>🏆 Ranking Global</h3>";
+
+  list.forEach((p, i) => {
+    const av = p.avatar ? `<img src="${p.avatar}" width="28" height="28" style="vertical-align:middle;border-radius:6px;margin-right:8px" alt="avatar">` : '';
+    html += `<p style="margin:6px 0;">${i + 1}. ${av}<b>${p.name}</b> — <b style='color:var(--accent)'>${p.score}</b></p>`;
+  });
+
+  document.getElementById("ranking").innerHTML = html;
+}
+
+/* ---------- REINICIAR ---------- */
+function restart() {
+  document.getElementById("victoryScreen").style.display = "none";
+  document.getElementById("startScreen").style.display = "block";
+}
+</script>
+
+</body>
+</html>
