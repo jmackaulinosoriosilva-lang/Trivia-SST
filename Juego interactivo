@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trivia SST</title>
+
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #000000, #6E0909);
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .center-box {
+    background: #ffffffee;
+    padding: 35px;
+    width: 380px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.25);
+    animation: fadeIn 0.6s ease;
+  }
+
+  @keyframes fadeIn {
+    from {opacity: 0; transform: scale(0.9);}
+    to {opacity: 1; transform: scale(1);}
+  }
+
+  .input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: 1px solid #aaa;
+    font-size: 16px;
+  }
+
+  .avatar-box {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 15px 0;
+  }
+
+  .avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: 0.2s;
+  }
+
+  .avatar:hover {
+    transform: scale(1.07);
+  }
+
+  .avatar.selected {
+    border-color: #d62828;
+    transform: scale(1.12);
+  }
+
+  button {
+    width: 100%;
+    padding: 12px;
+    background: #d62828;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.2s;
+  }
+
+  button:hover {
+    background: #b71c1c;
+    transform: scale(1.03);
+  }
+
+  /* TARJETA DEL JUEGO */
+  .card {
+    display: none;
+    background: #ffffffdd;
+    backdrop-filter: blur(5px);
+    width: 90%;
+    max-width: 430px;
+    padding: 25px;
+    border-radius: 20px;
+    text-align: center;
+    animation: fadeIn 0.6s ease;
+  }
+
+  #timer {
+    font-size: 22px;
+    font-weight: bold;
+    color: #b71c1c;
+  }
+
+  .option {
+    background: #eee;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.25s;
+  }
+
+  .option:hover {
+    background: #ddd;
+    transform: scale(1.02);
+  }
+
+  /* VICTORY SCREEN */
+  #victoryScreen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    backdrop-filter: blur(8px);
+    background: #000000aa;
+    color: white;
+    text-align: center;
+    padding-top: 80px;
+    animation: fadeIn 0.8s ease;
+  }
+
+  .medal {
+    font-size: 100px;
+    margin-bottom: 15px;
+  }
+
+  .gold { color: gold; }
+  .silver { color: #c0c0c0; }
+  .bronze { color: #cd7f32; }
+
+  #ranking {
+    margin-top: 20px;
+    font-size: 1.1em;
+    color: #ddd;
+  }
+
+  /* CONFETTI */
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background: gold;
+    top: -10px;
+    animation: fall 3s linear infinite;
+  }
+
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(360deg); }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- PANTALLA DE INICIO -->
+<div id="startScreen" class="center-box">
+  <h2>Bienvenido a Trivia SST</h2>
+  <input id="playerName" class="input" placeholder="Escribe tu nombre" />
+
+  <h3>Elige un avatar:</h3>
+  <div class="avatar-box">
+    <img src="avatar1.png" class="avatar" data-id="1">
+    <img src="avatar2.png" class="avatar" data-id="2">
+    <img src="avatar3.png" class="avatar" data-id="3">
+  </div>
+
+  <button onclick="startGame()">Comenzar</button>
+</div>
+
+<!-- TARJETA DEL JUEGO -->
+<div id="gameCard" class="card">
+  <h2 id="question"></h2>
+  <div id="timer"></div>
+  <div id="options"></div>
+</div>
+
+<!-- VICTORY SCREEN -->
+<div id="victoryScreen">
+  <div id="victoryMedal"></div>
+  <h1 id="victoryTitle"></h1>
+  <h2 id="victoryScore"></h2>
+
+  <div id="ranking"></div>
+
+  <button onclick="restart()">Volver a jugar</button>
+</div>
+
+<script>
+/* ---------- VARIABLES ---------- */
+let playerName = "";
+let playerAvatar = null;
+let questions = [];
+let index = 0;
+let score = 0;
+let timer = 0;
+let timerInterval;
+
+/* ---------- SONIDOS ---------- */
+const soundCorrect = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_9e678f3b51.mp3?filename=correct-2-46134.mp3");
+const soundWrong = new Audio("https://cdn.pixabay.com/download/audio/2021/08/04/audio_619eca14ff.mp3?filename=error-126627.mp3");
+const soundVictory = new Audio("https://cdn.pixabay.com/download/audio/2023/05/10/audio_34919f7775.mp3?filename=winning-21869.mp3");
+
+/* ---------- AVATARES ---------- */
+document.querySelectorAll(".avatar").forEach(a => {
+  a.addEventListener("click", () => {
+    document.querySelectorAll(".avatar").forEach(x => x.classList.remove("selected"));
+    a.classList.add("selected");
+    playerAvatar = a.dataset.id;
+  });
+});
+
+/* ---------- PREGUNTAS (30 ITEMS) ---------- */
+const allQuestions = [
+  { q: "¿Qué significa EPP?", o: ["Equipo de Protección Personal", "Elemento Público Preventivo", "Equipo Primario Público"], c: 0, d: "facil" },
+  { q: "Color que señala riesgo eléctrico:", o: ["Azul", "Amarillo", "Verde"], c: 1, d: "facil" },
+  { q: "¿Qué hacer ante derrame químico?", o: ["Ignorar", "Avisar y usar EPP", "Pisar el derrame"], c: 1, d: "facil" },
+  { q: "Las gafas de seguridad protegen:", o: ["Pies", "Ojos", "Espalda"], c: 1, d: "facil" },
+  { q: "Señal verde indica:", o: ["Peligro", "Seguridad", "Prohibición"], c: 1, d: "facil" },
+
+  { q: "Extintor para incendios eléctricos:", o: ["Agua", "CO₂", "Tierra"], c: 1, d: "intermedio" },
+  { q: "Límite de ruido sin protección:", o: ["85 dB", "40 dB", "160 dB"], c: 0, d: "intermedio" },
+  { q: "Trabajo en alturas es riesgo:", o: ["Físico", "Mecánico", "Locativo"], c: 0, d: "intermedio" },
+  { q: "Si hay fuga de gas:", o: ["Encender fósforos", "Ventilar área", "Dormir"], c: 1, d: "intermedio" },
+  { q: "Documento de roles en emergencias:", o: ["IPER", "Reglamento", "Plan de emergencias"], c: 2, d: "intermedio" },
+
+  { q: "Orden correcto del RCP:", o: ["Comprimir – Ventilar", "Golpear – Correr", "Observar – Dormir"], c: 0, d: "dificil" },
+  { q: "Si un químico toca piel:", o: ["Cubrir", "Lavar con agua", "Calentar"], c: 1, d: "dificil" },
+  { q: "Responsable del SGSST:", o: ["Todos", "Solo jefe", "Vigilante"], c: 0, d: "dificil" },
+  { q: "Riesgo biomecánico implica:", o: ["Esfuerzos repetitivos", "Rayos UV", "Electricidad"], c: 0, d: "dificil" },
+  { q: "Protección respiratoria sirve para:", o: ["Ruido", "Sustancias peligrosas", "Golpes"], c: 1, d: "dificil" }
+];
+
+/* ---------- INICIAR JUEGO ---------- */
+function startGame() {
+  playerName = document.getElementById("playerName").value.trim();
+
+  if (playerName === "" || !playerAvatar) {
+    alert("Debes escribir tu nombre y seleccionar un avatar.");
+    return;
+  }
+
+  score = 0;
+  index = 0;
+
+  // Selección aleatoria de 10 preguntas
+  questions = [...allQuestions].sort(() => Math.random() - 0.5).slice(0, 10);
+
+  document.getElementById("startScreen").style.display = "none";
+  document.getElementById("gameCard").style.display = "block";
+
+  loadQuestion();
+}
+
+/* ---------- TEMPORIZADOR POR DIFICULTAD ---------- */
+function startTimer(difficulty) {
+  clearInterval(timerInterval);
+
+  if (difficulty === "facil") timer = 15;
+  if (difficulty === "intermedio") timer = 25;
+  if (difficulty === "dificil") timer = 30;
+
+  document.getElementById("timer").textContent = `Tiempo: ${timer}s`;
+
+  timerInterval = setInterval(() => {
+    timer--;
+    document.getElementById("timer").textContent = `Tiempo: ${timer}s`;
+
+    if (timer <= 0) {
+      clearInterval(timerInterval);
+      index++;
+      loadQuestion();
+    }
+  }, 1000);
+}
+
+/* ---------- MOSTRAR PREGUNTA ---------- */
+function loadQuestion() {
+  if (index >= questions.length) return endGame();
+
+  const q = questions[index];
+
+  document.getElementById("question").textContent = q.q;
+  document.getElementById("options").innerHTML = "";
+
+  startTimer(q.d);
+
+  q.o.forEach((opt, i) => {
+    const btn = document.createElement("div");
+    btn.classList.add("option");
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(i);
+    document.getElementById("options").appendChild(btn);
+  });
+}
+
+/* ---------- VALIDAR RESPUESTA ---------- */
+function checkAnswer(i) {
+  clearInterval(timerInterval);
+
+  const correctIndex = questions[index].c;
+  const opts = document.querySelectorAll(".option");
+
+  opts.forEach((o, idx) => {
+    o.style.pointerEvents = "none";
+    o.style.background = idx === correctIndex ? "#4CAF50" : "#b71c1c";
+    o.style.color = "white";
+  });
+
+  if (i === correctIndex) {
+    soundCorrect.play();
+    score++;
+  } else {
+    soundWrong.play();
+  }
+
+  setTimeout(() => {
+    index++;
+    loadQuestion();
+  }, 900);
+}
+
+/* ---------- FINAL DEL JUEGO ---------- */
+function endGame() {
+  document.getElementById("gameCard").style.display = "none";
+  document.getElementById("victoryScreen").style.display = "block";
+
+  saveToRanking(playerName, score);
+
+  const medalDiv = document.getElementById("victoryMedal");
+  const title = document.getElementById("victoryTitle");
+
+  if (score >= 9) {
+    medalDiv.innerHTML = `<div class="medal gold">🥇</div>`;
+    title.textContent = "¡Victoria Suprema!";
+    soundVictory.play();
+    launchConfetti();
+  } else if (score >= 7) {
+    medalDiv.innerHTML = `<div class="medal silver">🥈</div>`;
+    title.textContent = "¡Gran Resultado!";
+  } else {
+    medalDiv.innerHTML = `<div class="medal bronze">🥉</div>`;
+    title.textContent = "Buen intento, sigue aprendiendo";
+  }
+
+  document.getElementById("victoryScore").textContent =
+    `${playerName}, tu puntaje fue ${score}/10`;
+
+  showRanking();
+}
+
+/* ---------- CONFETTI ---------- */
+function launchConfetti() {
+  for (let i = 0; i < 60; i++) {
+    let c = document.createElement("div");
+    c.classList.add("confetti");
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.animationDuration = (2 + Math.random() * 2) + "s";
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4000);
+  }
+}
+
+/* ---------- RANKING LOCAL ---------- */
+function saveToRanking(name, score) {
+  let ranking = JSON.parse(localStorage.getItem("rankingSST") || "[]");
+
+  ranking.push({ name, score });
+  ranking.sort((a, b) => b.score - a.score);
+
+  ranking = ranking.slice(0, 5);
+  localStorage.setItem("rankingSST", JSON.stringify(ranking));
+}
+
+function showRanking() {
+  const list = JSON.parse(localStorage.getItem("rankingSST") || "[]");
+  let html = "<h3>🏆 Ranking Global</h3>";
+
+  list.forEach((p, i) => {
+    html += `<p>${i + 1}. ${p.name} — <b>${p.score}</b></p>`;
+  });
+
+  document.getElementById("ranking").innerHTML = html;
+}
+
+/* ---------- REINICIAR ---------- */
+function restart() {
+  document.getElementById("victoryScreen").style.display = "none";
+  document.getElementById("startScreen").style.display = "block";
+}
+</script>
+
+</body>
+</html>
