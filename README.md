@@ -1,4 +1,4 @@
-# Trivia de SST
+# Trivia de SST — Departamento de Operaciones
 
 Este es un pequeño juego de trivia sobre Seguridad y Salud en el Trabajo (SST) preparado para demostraciones.
 
