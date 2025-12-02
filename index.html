@@ -336,7 +336,9 @@ nameInput.addEventListener('input', (e) => {
 function updateStartButton(){
   const start = document.getElementById('startBtn');
   const nameVal = document.getElementById('playerName').value.trim();
-  if (nameVal && playerAvatar) {
+  // Allow starting when the user enters a name. If no avatar was uploaded,
+  // a default avatar will be used at game start.
+  if (nameVal) {
     start.removeAttribute('disabled');
     start.classList.add('start-ready');
   } else {
@@ -519,9 +521,23 @@ const allQuestions = [
 function startGame() {
   playerName = document.getElementById("playerName").value.trim();
 
-  if (playerName === "" || !playerAvatar) {
-    alert("Debes escribir tu nombre y seleccionar un avatar.");
+  if (playerName === "") {
+    alert("Debes escribir tu nombre.");
     return;
+  }
+
+  // If the user didn't upload/select an avatar, set a sensible default
+  // (local asset `assets/img/avatar1.svg`) and save it to the profile.
+  if (!playerAvatar) {
+    const defaultIndex = '1';
+    const defaultAsset = `assets/img/avatar${defaultIndex}.svg`;
+    playerAvatar = 'index';
+    const startPreview = document.getElementById('startAvatarPreview');
+    const victoryPreview = document.getElementById('playerAvatarPreview');
+    if (startPreview) { startPreview.src = defaultAsset; startPreview.style.display = 'inline-block'; }
+    if (victoryPreview) { victoryPreview.src = defaultAsset; victoryPreview.style.display = 'inline-block'; }
+    // persist default avatar (avatar stores the index for 'index' type)
+    saveProfile(playerName, 'index', defaultIndex);
   }
 
   // Guardar perfil final al comenzar el juego
