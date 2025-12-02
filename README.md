@@ -1,4 +1,4 @@
-# Trivia SST — Mejorado
+# Trivia de SST
 
 Este es un pequeño juego de trivia sobre Seguridad y Salud en el Trabajo (SST) preparado para demostraciones.
 
