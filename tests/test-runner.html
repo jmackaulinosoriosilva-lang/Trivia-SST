@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tests - Trivia SST</title>
+  <style>
+    body{font-family:Inter, Arial; padding:18px; background:#0b0b0b;color:#fff}
+    .ok{color:#10b981}
+    .fail{color:#ff6b6b}
+    pre{background:#111;padding:12px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <h1>Test runner — Trivia SST</h1>
+  <p>This page loads index.html into an iframe and performs automated DOM tests (in-browser).</p>
+  <div id="results"></div>
+  <iframe id="appframe" src="/index.html" style="width:100%;height:600px;border:1px solid rgba(255,255,255,0.06);background:#fff"></iframe>
+  <script>
+  async function run() {
+    const res = document.getElementById('results');
+    const f = document.getElementById('appframe');
+    await new Promise(r => setTimeout(r, 500)); // give iframe time to load
+    const doc = f.contentDocument;
+    const tests = [];
+
+    tests.push({name:'app loads', run:() => !!doc.getElementById('playerName')});
+    tests.push({name:'site logo present at top-left', run: () => {
+      const s = doc.getElementById('siteLogo'); if (!s || !s.src) return false; const cs = f.contentWindow.getComputedStyle(s); return cs && (cs.borderRadius === '0px' || cs.borderRadius === '0');
+    }});
+    tests.push({name:'upload input present', run:() => !!doc.getElementById('uploadAvatar')});
+    tests.push({name:'start button present & disabled', run:() => {
+      const b = doc.getElementById('startBtn'); return b && b.disabled; }
+    });
+    tests.push({name:'no preset avatars (upload-only)', run:() => Array.from(doc.querySelectorAll('.avatar')).length === 0});
+
+    // test enabling sequence: enter name and click an avatar
+    // simulate upload using setAvatarFromDataUrl helper
+    tests.push({name:'enable start after name + upload', run:()=>{
+      const name = doc.getElementById('playerName');
+      const start = doc.getElementById('startBtn');
+      if (!name||!start) return false;
+      name.value = 'Test User'; name.dispatchEvent(new Event('input', { bubbles:true }));
+      // small transparent 1x1 PNG data URL
+      const sample = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
+      // call helper in iframe
+      if (typeof f.contentWindow.setAvatarFromDataUrl === 'function') {
+        f.contentWindow.setAvatarFromDataUrl(sample);
+      } else {
+        return false;
+      }
+      return !start.disabled;
+    }});
+
+    // test starting the game
+    tests.push({name:'start hides start screen and shows game card', run: ()=>{
+      const start = doc.getElementById('startBtn');
+      if (!start) return false; start.click();
+      const startScreen = doc.getElementById('startScreen');
+      const gameCard = doc.getElementById('gameCard');
+      return startScreen.style.display === 'none' && gameCard.style.display === 'block';
+    }});
+
+    for (const t of tests){
+      try {
+        const ok = await new Promise(r => r(t.run()));
+        const el = document.createElement('div');
+        el.innerHTML = ok ? `<div class='ok'>✓ ${t.name}</div>` : `<div class='fail'>✕ ${t.name}</div>`;
+        res.appendChild(el);
+      } catch (e) {
+        const el = document.createElement('div');
+        el.innerHTML = `<div class='fail'>✕ ${t.name} (error)</div><pre>${e.stack||e}</pre>`;
+        res.appendChild(el);
+      }
+    }
+  }
+  run();
+  </script>
+</body>
+</html>
